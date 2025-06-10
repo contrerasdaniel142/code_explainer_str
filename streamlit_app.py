@@ -1,7 +1,7 @@
 import os
 os.environ["OMP_NUM_THREADS"] = "1" # Limita los hilos de OpenMP para evitar conflictos
-import streamlit as st
 import torch
+import streamlit as st
 import logging
 from training_utils import ModelComparator, set_seed
 

@@ -513,9 +513,10 @@ class ModelComparator:
              base_for_peft.to(self.device)
 
         self.tuned_model = PeftModel.from_pretrained(
-            base_for_peft, 
+            base_for_peft,
             self.tuned_model_path,
-            is_trainable=False
+            is_trainable=False,
+            local_files_only=True # Explicitly tell it to load from local files only
         )
         # Ensure tuned PEFT model is on the correct device after loading adapters
         if self.device != "cpu": # PeftModel.from_pretrained might not move all parts if base is already on device
