@@ -450,12 +450,12 @@ class ModelComparator:
         self.logger = logging.getLogger(f"{__name__}.ModelComparator")
 
         if device:
-            self.device = device
+            self.device = torch.device(device)
         elif torch.cuda.is_available():
-            self.device = "cuda"
+            self.device = torch.device("cuda")
         else:
-            self.device = "cpu"
-        self.logger.info(f"ModelComparator usando device: {self.device}")
+            self.device = torch.device("cpu")
+        self.logger.info(f"ModelComparator usando device: {self.device.type}")
 
         self.tokenizer = None
         self.base_model = None
@@ -482,45 +482,40 @@ class ModelComparator:
         else:
             self.logger.warning("ModelComparator: BitsAndBytesConfig no se usará en CPU para ModelComparator.")
             
-        self.logger.info(f"Cargando modelo base {self.base_model_id} en {self.device}...")
+        self.logger.info(f"Cargando modelo base {self.base_model_id} en {self.base_model.device}.")
         self.base_model = AutoModelForCausalLM.from_pretrained(
             self.base_model_id,
             quantization_config=bnb_config_val_comp,
-            device_map=self.device if self.device != "cpu" else {"": "cpu"}, # More robust device_map
+            device_map="auto", # Use "auto" for flexible device placement
             torch_dtype=model_dtype_comp,
             trust_remote_code=True
         )
+        self.logger.info(f"Modelo base {self.base_model_id} cargado en {self.base_model.device}.")
         
-        self.logger.info(f"Cargando modelo fine-tuned desde {self.tuned_model_path} en {self.device}...")
+        self.logger.info(f"Cargando modelo fine-tuned desde {self.tuned_model_path} en {self.device.type}...")
         
         # For PeftModel, the base model should be loaded fresh for applying adapters,
         # especially if quantization or dtype might differ or if base_model above was modified.
         base_for_peft_config = {
             "quantization_config": bnb_config_val_comp,
             "torch_dtype": model_dtype_comp,
-            "trust_remote_code": True
+            "trust_remote_code": True,
+            "device_map": "auto" # Use "auto" for flexible device placement
         }
-        # If CPU, device_map must be explicit for from_pretrained for base of PEFT
-        if self.device == "cpu":
-            base_for_peft_config["device_map"] = {"": "cpu"}
 
         base_for_peft = AutoModelForCausalLM.from_pretrained(
-            self.base_model_id, 
+            self.base_model_id,
             **base_for_peft_config
         )
-        # If CUDA, move to device before PeftModel, device_map="auto" handles multi-GPU for Peft but here it's single device
-        if self.device != "cpu":
-             base_for_peft.to(self.device)
-
+        self.logger.info(f"Modelo base para PEFT cargado en {base_for_peft.device}.")
+             
         self.tuned_model = PeftModel.from_pretrained(
             base_for_peft,
             self.tuned_model_path,
             is_trainable=False,
             local_files_only=True # Explicitly tell it to load from local files only
         )
-        # Ensure tuned PEFT model is on the correct device after loading adapters
-        if self.device != "cpu": # PeftModel.from_pretrained might not move all parts if base is already on device
-            self.tuned_model.to(self.device) 
+        self.logger.info(f"Modelo fine-tuned cargado. Final device: {self.tuned_model.device}.")
         
         self.base_model.eval()
         self.tuned_model.eval()
