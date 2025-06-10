@@ -1,0 +1,33 @@
+# Byte-compiled / optimized / compiled files
+__pycache__/
+*.pyc
+*.pyd
+*.pyo
+*.egg-info/
+.Python
+build/
+dist/
+
+# Virtual environment
+.venv/
+env/
+venv/
+
+# IDE-specific files
+.vscode/
+.idea/
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
+
+# OS generated files
+.DS_Store
+.Trashes
+Thumbs.db
+
+# Specific project files to ignore
+fineTunedModel/
+Streamlit.rar
+comparison_report_20250524_124117.html
