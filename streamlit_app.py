@@ -1,5 +1,5 @@
 import os
-# os.environ["OMP_NUM_THREADS"] = "1" # Limita los hilos de OpenMP para evitar conflictos
+os.environ["OMP_NUM_THREADS"] = "1" # Limita los hilos de OpenMP para evitar conflictos
 import streamlit as st
 import torch
 import logging
