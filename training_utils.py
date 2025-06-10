@@ -473,16 +473,15 @@ class ModelComparator:
         # Solo usar bnb_config si es CUDA
         bnb_config_val_comp = None
         model_dtype_comp = torch.float32
-        if self.device == 'cuda':
+        if self.device.type == 'cuda':
             # Usar float16 para inferencia en T4s también
             model_dtype_comp = torch.float16
             # Pasar el dtype correcto a bnb_config para la comparación
-            bnb_config_val_comp = create_bnb_config(compute_dtype=model_dtype_comp) 
+            bnb_config_val_comp = create_bnb_config(compute_dtype=model_dtype_comp)
             self.logger.info("ModelComparator: Usando float16 y BNB compute_dtype=float16 para CUDA.")
         else:
             self.logger.warning("ModelComparator: BitsAndBytesConfig no se usará en CPU para ModelComparator.")
             
-        self.logger.info(f"Cargando modelo base {self.base_model_id} en {self.base_model.device}.")
         try:
             self.base_model = AutoModelForCausalLM.from_pretrained(
                 self.base_model_id,
@@ -533,9 +532,9 @@ class ModelComparator:
         inputs = self.tokenizer(prompt, return_tensors="pt", padding=True, truncation=True, max_length=self.config.get("max_length", 1024) - max_new_tokens) # Dejar espacio
         inputs = {k: v.to(self.device) for k, v in inputs.items()}
         
-        use_amp = self.device == 'cuda' # self.device es una cadena aquí "cuda" o "cpu"
+        use_amp = self.device.type == 'cuda'
         autocast_dtype_comp = torch.float16 if use_amp else torch.float32
-        current_device_type_str = self.device # es "cuda" o "cpu"
+        current_device_type_str = self.device.type
         with torch.no_grad():
             with torch.amp.autocast(device_type=current_device_type_str, dtype=autocast_dtype_comp, enabled=use_amp):
                 outputs = model.generate(
