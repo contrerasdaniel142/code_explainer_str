@@ -26,8 +26,3 @@ venv/
 .DS_Store
 .Trashes
 Thumbs.db
-
-# Specific project files to ignore
-fineTunedModel/
-Streamlit.rar
-comparison_report_20250524_124117.html
