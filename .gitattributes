@@ -1,3 +1,4 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+fineTunedModel/*.safetensors filter=lfs diff=lfs merge=lfs -text
 fineTunedModel/adapter_model.safetensors filter=lfs diff=lfs merge=lfs -text
