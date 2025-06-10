@@ -483,39 +483,47 @@ class ModelComparator:
             self.logger.warning("ModelComparator: BitsAndBytesConfig no se usará en CPU para ModelComparator.")
             
         self.logger.info(f"Cargando modelo base {self.base_model_id} en {self.base_model.device}.")
-        self.base_model = AutoModelForCausalLM.from_pretrained(
-            self.base_model_id,
-            quantization_config=bnb_config_val_comp,
-            device_map="auto", # Use "auto" for flexible device placement
-            torch_dtype=model_dtype_comp,
-            trust_remote_code=True
-        )
-        self.logger.info(f"Modelo base {self.base_model_id} cargado en {self.base_model.device}.")
-        
+        try:
+            self.base_model = AutoModelForCausalLM.from_pretrained(
+                self.base_model_id,
+                quantization_config=bnb_config_val_comp,
+                device_map="auto", # Use "auto" for flexible device placement
+                torch_dtype=model_dtype_comp,
+                trust_remote_code=True
+            )
+            self.logger.info(f"Modelo base {self.base_model_id} cargado en {self.base_model.device}.")
+        except Exception as e:
+            self.logger.error(f"Error al cargar el modelo base {self.base_model_id}: {e}", exc_info=True)
+            raise # Re-raise the exception to propagate it
+
         self.logger.info(f"Cargando modelo fine-tuned desde {self.tuned_model_path} en {self.device.type}...")
         
-        # For PeftModel, the base model should be loaded fresh for applying adapters,
-        # especially if quantization or dtype might differ or if base_model above was modified.
-        base_for_peft_config = {
-            "quantization_config": bnb_config_val_comp,
-            "torch_dtype": model_dtype_comp,
-            "trust_remote_code": True,
-            "device_map": "auto" # Use "auto" for flexible device placement
-        }
+        try:
+            # For PeftModel, the base model should be loaded fresh for applying adapters,
+            # especially if quantization or dtype might differ or if base_model above was modified.
+            base_for_peft_config = {
+                "quantization_config": bnb_config_val_comp,
+                "torch_dtype": model_dtype_comp,
+                "trust_remote_code": True,
+                "device_map": "auto" # Use "auto" for flexible device placement
+            }
 
-        base_for_peft = AutoModelForCausalLM.from_pretrained(
-            self.base_model_id,
-            **base_for_peft_config
-        )
-        self.logger.info(f"Modelo base para PEFT cargado en {base_for_peft.device}.")
-             
-        self.tuned_model = PeftModel.from_pretrained(
-            base_for_peft,
-            self.tuned_model_path,
-            is_trainable=False,
-            local_files_only=True # Explicitly tell it to load from local files only
-        )
-        self.logger.info(f"Modelo fine-tuned cargado. Final device: {self.tuned_model.device}.")
+            base_for_peft = AutoModelForCausalLM.from_pretrained(
+                self.base_model_id,
+                **base_for_peft_config
+            )
+            self.logger.info(f"Modelo base para PEFT cargado en {base_for_peft.device}.")
+                 
+            self.tuned_model = PeftModel.from_pretrained(
+                base_for_peft,
+                self.tuned_model_path,
+                is_trainable=False,
+                local_files_only=True # Explicitly tell it to load from local files only
+            )
+            self.logger.info(f"Modelo fine-tuned cargado. Final device: {self.tuned_model.device}.")
+        except Exception as e:
+            self.logger.error(f"Error al cargar el modelo fine-tuned desde {self.tuned_model_path}: {e}", exc_info=True)
+            raise # Re-raise the exception to propagate it
         
         self.base_model.eval()
         self.tuned_model.eval()
